@@ -1,0 +1,9 @@
+[submodule "rhc"]
+	path = rhc
+	url = git@github.com:fotioslindiakos/rhc.git
+[submodule "li"]
+	path = li
+	url = git@github.com:fotioslindiakos/li.git
+[submodule "crankcase"]
+	path = crankcase
+	url = git@github.com:fotioslindiakos/crankcase.git
