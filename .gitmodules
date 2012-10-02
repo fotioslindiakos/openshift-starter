@@ -7,3 +7,6 @@
 [submodule "crankcase"]
 	path = crankcase
 	url = git@github.com:fotioslindiakos/crankcase.git
+[submodule "origin-dev-tools"]
+	path = origin-dev-tools
+	url = git@github.com:fotioslindiakos/origin-dev-tools.git
