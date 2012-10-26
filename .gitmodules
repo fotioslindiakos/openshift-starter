@@ -7,6 +7,3 @@
 [submodule "origin-dev-tools"]
 	path = origin-dev-tools
 	url = git@github.com:fotioslindiakos/origin-dev-tools.git
-[submodule "origin-server"]
-	path = origin-server
-	url = git@github.com:fotioslindiakos/origin-server.git
