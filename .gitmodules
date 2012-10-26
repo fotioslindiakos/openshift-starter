@@ -1,15 +1,15 @@
 [submodule "rhc"]
 	path = rhc
-	url = git@github.com:fotioslindiakos/rhc.git
+	url = git@github.com:openshift/rhc.git
 [submodule "li"]
 	path = li
-	url = git@github.com:fotioslindiakos/li.git
+	url = git@github.com:openshift/li.git
 [submodule "origin-dev-tools"]
 	path = origin-dev-tools
-	url = git@github.com:fotioslindiakos/origin-dev-tools.git
+	url = git@github.com:openshift/origin-dev-tools.git
 [submodule "origin-server"]
 	path = origin-server
-	url = git@github.com/fotioslindiakos/origin-server.git
+	url = git@github.com:openshift/origin-server.git
 [submodule "enterprise-install"]
 	path = enterprise-install
 	url = git@github.com:openshift/enterprise-install.git
