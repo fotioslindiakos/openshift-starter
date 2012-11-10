@@ -1,0 +1,178 @@
+#!/usr/bin/env ruby
+
+require 'rubygems'
+require 'commander/import'
+require 'yaml'
+require 'pry'
+
+program :version, '0.0.1'
+program :description, 'Some git helpers for OpenShift'
+
+OPENSHIFT_REPOS = ["rhc","li","origin-server","origin-dev-tools", "enterprise-install"]
+
+def has_changes?
+  changes = !git_cmd(:ls,"--modified").lines.to_a.empty?
+ensure
+  msg("Branch has unsaved changes") if changes
+end
+
+def branches
+  @branches ||= git_cmd(:branch,"--all").lines.to_a.map{|x| x.strip }
+end
+
+def current_branch
+  branches.grep(/^\*/).first.split(' ').last
+end
+
+def current_repo
+  Dir.pwd.split(/\//).last
+end
+
+def has_branch?(branch,remote = true)
+  branch = File.join("remotes", branch) if remote
+  !branches.grep(/^(\*\s+)?#{branch}/).empty?
+end
+
+def remotes
+  git_cmd(:remote,"show").lines.to_a.map{|x| x.strip}
+end
+
+def has_remote?(track)
+  remote = track.split(/\//).first
+  !remotes.grep(/^#{remote}$/).empty?
+end
+
+def git_cmd(cmd,options = nil)
+  command = case cmd
+            when :ls
+              "ls-files"
+            else
+              cmd.to_s
+            end
+
+  git_cmd = "git #{command} #{options}".strip
+
+  debug "Running: '#{git_cmd}'"
+  %x[#{git_cmd}]
+end
+
+def debug(msg)
+  msg(msg, :yellow) if $debug
+end
+
+def msg(msg,color = :green)
+  color("\t"+msg,color)
+end
+
+def dump_opts(options)
+    vals = {:branch => options.branch,
+     :repo => options.repo,
+     :track => options.track}
+
+    max_len = vals.keys.map(&:size).max
+
+    vals.each do |key,val|
+      str = "%#{max_len}s => %s" % [key,val]
+      debug(str)
+    end
+end
+
+global_option('--debug') { $debug = true }
+
+command :update do |c|
+  c.syntax = 'OpenShift Git update [options]'
+  c.summary = ''
+  c.description = ''
+  c.example 'description', 'command example'
+  c.option '-b', '--branch BRANCH', String, 'The branches to switch to'
+  c.option '-r', '--repo REPOS', Array, "The repos"
+  c.option '-t', '--track TRACK', String, "Upstream to track"
+
+  c.action do |args, options|
+
+    defaults = {
+      :track => 'upstream/master',
+      :branch => 'master'
+    }
+
+    args.each do |arg|
+      opt = case arg
+      when /\//
+        :track
+      when *OPENSHIFT_REPOS
+        :repo
+      else
+        :branch
+      end
+      defaults[opt] = arg
+    end
+
+    options.default defaults
+
+    dump_opts(options)
+
+    begin
+      modified = has_changes?
+      git_cmd(:stash) if modified
+
+      git_cmd(:fetch,"--all")
+
+      git_cmd(:checkout, "master")
+      git_cmd(:rebase,"upstream/master")
+      git_cmd(:push,"origin master -f")
+
+      # If we don't specify a repo, do this to all repos
+      desired_repo = options.repo.nil? ? true : options.repo.include?(current_repo)
+
+      # See if we have the desired branch
+      has_branch = has_branch?(options.branch,false)
+
+      # Let's make sure we have the proper upstream
+      if desired_repo && !has_remote?(options.track)
+        remote = options.track.split(/\//).first
+        remote_name = (remote == "upstream" ? "openshift" : remote)
+        msg("Adding remote: #{remote_name}")
+        git_cmd(:remote,"add #{remote} git://github.com/%s/%s.git" % [remote_name,current_repo])
+      end
+
+      checkout = case
+                 when has_branch
+                   :checkout
+                 when !has_branch && desired_repo
+                   :new
+                 else
+                   nil
+                 end
+
+      case checkout
+      when :new
+        say "Creating new branch %s to track %s" % [options.branch, options.track]
+        git_cmd(:checkout,"-t -b #{options.branch} #{options.track}")
+      when :checkout
+        say "Switching to branch %s" % options.branch
+        git_cmd(:checkout, options.branch)
+      end
+
+      git_cmd(:rebase) unless checkout.nil?
+    ensure
+      # Make sure we pop any stashes
+      git_cmd(:stash,"pop") if modified
+    end
+  end
+end
+
+default_command :update
+
+command :init do |c|
+  c.syntax = "init [username]"
+
+  c.action do |args,options|
+    repos = OPENSHIFT_REPOS
+    repos.each do |repo|
+      #git_cmd(:submodule,"add upstream git@github.com:openshift/#{repo}.git")
+      Dir.chdir(repo) do |path|
+        binding.pry
+      end
+    end
+  end
+end

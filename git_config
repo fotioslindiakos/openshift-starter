@@ -1,0 +1,5 @@
+[alias]
+  openshift  = submodule foreach "../bin/openshift_git"
+	feature = !"../bin/openshift_git";
+  foobar = !"pwd"
+  sb  = submodule foreach "git status -sb"
