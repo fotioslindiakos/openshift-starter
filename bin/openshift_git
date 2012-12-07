@@ -10,6 +10,10 @@ program :description, 'Some git helpers for OpenShift'
 
 OPENSHIFT_REPOS = ["rhc","li","origin-server","origin-dev-tools", "enterprise-install"]
 
+if (a = ENV['DEBUG'])
+  $debug = [1,true].map(&:to_s).include?(a.to_s)
+end
+
 def has_changes?
   changes = !git_cmd(:ls,"--modified").lines.to_a.empty?
 ensure
@@ -79,6 +83,11 @@ end
 
 global_option('--debug') { $debug = true }
 
+def get_git_config(option,default)
+  value = git_cmd(:config,"--get openshift.#{option}").chomp
+  value.empty? ? default : value
+end
+
 command :update do |c|
   c.syntax = 'OpenShift Git update [options]'
   c.summary = ''
@@ -94,6 +103,7 @@ command :update do |c|
       :track => 'upstream/master',
       :branch => 'master'
     }
+    defaults2 = defaults.dup
 
     args.each do |arg|
       opt = case arg
@@ -117,9 +127,10 @@ command :update do |c|
 
       git_cmd(:fetch,"--all")
 
-      git_cmd(:checkout, "master")
-      git_cmd(:rebase,"upstream/master")
-      git_cmd(:push,"origin master -f")
+      # We should use the defaults here in case master isn't defined
+      git_cmd(:checkout, defaults2[:branch])
+      git_cmd(:rebase, defaults2[:track])
+      git_cmd(:push,"origin #{defaults2[:branch]} -f")
 
       # If we don't specify a repo, do this to all repos
       desired_repo = options.repo.nil? ? true : options.repo.include?(current_repo)
@@ -136,7 +147,7 @@ command :update do |c|
       end
 
       checkout = case
-                 when has_branch
+                 when has_branch && desired_repo
                    :checkout
                  when !has_branch && desired_repo
                    :new
